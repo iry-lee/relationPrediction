@@ -258,6 +258,11 @@ class Corpus:
 
         while(not q.empty()):
             top = q.get()
+            # liyirui add this line refer to github
+            # this will be helpful to accelarate the speed before trainning
+            # begin
+            if distance[top[0]] == nbd_size: continue
+            # end 
             if top[0] in graph.keys():
                 for target in graph[top[0]].keys():
                     if(target in visit.keys()):

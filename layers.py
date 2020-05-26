@@ -23,20 +23,13 @@ class ConvKB(nn.Module):
         nn.init.xavier_uniform_(self.conv_layer.weight, gain=1.414)
 
     def forward(self, conv_input):
-        # 下面增加一些保存输出的信息：
-        f = open('debug/out.txt', 'w+')
         batch_size, length, dim = conv_input.size()
-        # 如果想要修改的话，就是修改这个地方：
-        f.write('conv_input.size: ', conv_input.size(), '\n')
         # assuming inputs are of the form ->
-        # transpose对dim=1和dim=2做一次转置操作
-        f.write('conv_input: ', conv_input, '\n')
+        print('>>> conv_input: ', conv_input, '\n')
         conv_input = conv_input.transpose(1, 2)
         # batch * length(which is 3 here -> entity,relation,entity) * dim
         # To make tensor of size 4, where second dim is for input channels
         conv_input = conv_input.unsqueeze(1)
-        f.write('conv_input_2: ', conv_input, '\n')
-        f.close()
         out_conv = self.dropout(
             self.non_linearity(self.conv_layer(conv_input)))
 

@@ -21,9 +21,6 @@ import logging
 import time
 import pickle
 
-# 指定所使用的显卡
-CUDA_VISIBLE_DEVICES=1
-
 # %%
 # %%from torchviz import make_dot, make_dot_from_trace
 
