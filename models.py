@@ -48,9 +48,14 @@ class SpGAT(nn.Module):
                 edge_list, edge_type, edge_embed, edge_list_nhop, edge_type_nhop):
         x = entity_embeddings
 
+        # print(">>> entity_embeddings.size()")
+        # print(x.size())  # WN18RR: torch.Size([40943, 50]) 40943对应的是WN18RR的entity数量
+        # print('<<<')
+
         edge_embed_nhop = relation_embed[
             edge_type_nhop[:, 0]] + relation_embed[edge_type_nhop[:, 1]]
 
+        # attention的入口，有几个头，这里就有几个，然后将多个头的结果连接起来
         x = torch.cat([att(x, edge_list, edge_embed, edge_list_nhop, edge_embed_nhop)
                        for att in self.attentions], dim=1)
         x = self.dropout_layer(x)
@@ -111,6 +116,20 @@ class SpKBGATModified(nn.Module):
         nn.init.xavier_uniform_(self.W_entities.data, gain=1.414)
 
     def forward(self, Corpus_, adj, batch_inputs, train_indices_nhop):
+        # print(">>>")
+        # print("class SpKBGATModified.forward() arg.adj len(adj):")
+        # print(len(adj))     # WN18RR: 2
+        # print("class SpKBGATModified.forward() arg.adj len(adj[0]):")
+        # print(len(adj[0]))  # WN18RR: 2
+        # print("class SpKBGATModified.forward() arg.adj len(adj[1]):")
+        # print(len(adj[1]))  # WN18RR: 86835
+        # print('<<<')
+
+        # print(">>>")
+        # print("class SpKBGATModified.forward() arg.batch_inputs.size():")
+        # print(batch_inputs.size())     # WN18RR: torch.Size([260505, 3])
+        # print('<<<')
+
         # getting edge list
         edge_list = adj[0]
         edge_type = adj[1]

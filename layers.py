@@ -85,11 +85,17 @@ class SpGraphAttentionLayer(nn.Module):
         self.out_features = out_features
         self.num_nodes = num_nodes
         self.alpha = alpha
-        self.concat = concat
+        self.concat = concat  # 用于标记是否是最后一层
         self.nrela_dim = nrela_dim
-
+        ########## liyirui replace this ##########
+        # <begin>
+        # self.a = nn.Parameter(torch.zeros(
+        #     size=(out_features, 2 * in_features + nrela_dim)))
+        # <end>
+        # <new>
         self.a = nn.Parameter(torch.zeros(
-            size=(out_features, 2 * in_features + nrela_dim)))
+             size=(out_features, 2 * in_features)))
+        # <end new>
         nn.init.xavier_normal_(self.a.data, gain=1.414)
         self.a_2 = nn.Parameter(torch.zeros(size=(1, out_features)))
         nn.init.xavier_normal_(self.a_2.data, gain=1.414)
@@ -99,22 +105,68 @@ class SpGraphAttentionLayer(nn.Module):
         self.special_spmm_final = SpecialSpmmFinal()
 
     def forward(self, input, edge, edge_embed, edge_list_nhop, edge_embed_nhop):
-        N = input.size()[0]
+        N = input.size()[0]  # WN18RR: 40943
+
+        # print(">>>")
+        # print(edge.size())              # WN18RR: torch.Size([2, 86835])
+        # print(edge_list_nhop.size())    # WN18RR: torch.Size([2, 207376])
+        # print("<<<")
+
+        # 这里是论文中公式(5)(6)(7)所对应的代码
 
         # Self-attention on the nodes - Shared attention mechanism
         edge = torch.cat((edge[:, :], edge_list_nhop[:, :]), dim=1)
         edge_embed = torch.cat(
             (edge_embed[:, :], edge_embed_nhop[:, :]), dim=0)
+    
+        # print(">>>")
+        # print(input[edge[0, :], :]) 
+        # print(input[edge[1, :], :])
+        # print(edge_embed[:, :])
+        # print("<<<")
 
-        edge_h = torch.cat(
-            (input[edge[0, :], :], input[edge[1, :], :], edge_embed[:, :]), dim=1).t()
+        # print(">>>")
+        # print(edge.size())                  # WN18RR: torch.Size([2, 294211]) one_hop 86835 + nhop 207376
+        # print(input.size())                 # WN18RR: torch.Size([40943, 50])
+        # print(input[edge[0, :], :].size())  # WN18RR: torch.Size([294211, 50])
+        # print(input[edge[1, :], :].size())  # WN18RR: torch.Size([294211, 50])
+        # print(edge_embed[:, :].size())      # WN18RR: torch.Size([294211, 50])
+        # print("<<<")
+
+        # 公式(5) 
+        # W_1: a
+        # h_i: input[edge[0, :], :]
+        # h_j: input[edge[1, :], :]
+        # g_k: edge_embed[:, :]
+        ########## liyirui comment this line ##########
+        # <begin>
+        # edge_h = torch.cat(
+        #     (input[edge[0, :], :], input[edge[1, :], :], edge_embed[:, :]), dim=1).t()  # WN18RR: torch.Size([100, 294211])
+        # <end>
         # edge_h: (2*in_dim + nrela_dim) x E
 
+        ########## liyirui's improve is here ##########
+        # <begin>
+        # edge_h_1: [h_j][g_k]
+        # edge_h_2: [h_i][0] 或者 [h_i][self_loop]
+        edge_h_1 = torch.cat(
+            (input[edge[1, :], :], edge_embed[:, :]), dim=1).t()  # WN18RR: torch.Size([100, 294211])
+        # print(">>> edge_h_1.size():")
+        # print(edge_h_1.size())
+        self_loop = torch.zeros(input.size()).cuda()
+        edge_h_2 = torch.cat((input[:, :], self_loop[:, :]), dim=1).t()  # WN18RR: torch.Size([100, 40943])
+        # print(">>> edge_h_2.size():")
+        # print(edge_h_2.size())
+        edge_h = torch.cat((edge_h_1[:, :], edge_h_2[:, :]), dim=1).t().transpose(0, 1)
+        # <end>
+        
         edge_m = self.a.mm(edge_h)
         # edge_m: D * E
 
         # to be checked later
+        # 公式(6)
         powers = -self.leakyrelu(self.a_2.mm(edge_m).squeeze())
+        # 公式(7) begin
         edge_e = torch.exp(powers).unsqueeze(1)
         assert not torch.isnan(edge_e).any()
         # edge_e: E
@@ -132,7 +184,7 @@ class SpGraphAttentionLayer(nn.Module):
 
         edge_w = (edge_e * edge_m).t()
         # edge_w: E * D
-
+        # 公式(8)
         h_prime = self.special_spmm_final(
             edge, edge_w, N, edge_w.shape[0], self.out_features)
 
