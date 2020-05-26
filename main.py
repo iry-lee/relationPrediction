@@ -21,6 +21,9 @@ import logging
 import time
 import pickle
 
+# 指定所使用的显卡
+CUDA_VISIBLE_DEVICES=1
+
 # %%
 # %%from torchviz import make_dot, make_dot_from_trace
 
@@ -88,7 +91,8 @@ args = parse_args()
 def load_data(args):
     train_data, validation_data, test_data, entity2id, relation2id, headTailSelector, unique_entities_train = build_data(
         args.data, is_unweigted=False, directed=True)
-
+        
+    # 如果有预训练好的embedding的话，就直接导入，否则就随机初始化
     if args.pretrained_emb:
         entity_embeddings, relation_embeddings = init_embeddings(os.path.join(args.data, 'entity2vec.txt'),
                                                                  os.path.join(args.data, 'relation2vec.txt'))

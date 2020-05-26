@@ -197,6 +197,7 @@ class SpKBGATConvOnly(nn.Module):
                              self.conv_out_channels, self.drop_conv, self.alpha_conv)
 
     def forward(self, Corpus_, adj, batch_inputs):
+        # 应该是在这里输入论文中的公式(5)中的[h_i][h_j][g_k]
         conv_input = torch.cat((self.final_entity_embeddings[batch_inputs[:, 0], :].unsqueeze(1), self.final_relation_embeddings[
             batch_inputs[:, 1]].unsqueeze(1), self.final_entity_embeddings[batch_inputs[:, 2], :].unsqueeze(1)), dim=1)
         out_conv = self.convKB(conv_input)
