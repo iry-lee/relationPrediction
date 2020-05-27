@@ -110,15 +110,29 @@ class SpGraphAttentionLayer(nn.Module):
         # print(">>>")
         # print(edge.size())              # WN18RR: torch.Size([2, 86835])
         # print(edge_list_nhop.size())    # WN18RR: torch.Size([2, 207376])
+        # print(edge)
         # print("<<<")
-
+        
         # 这里是论文中公式(5)(6)(7)所对应的代码
-
         # Self-attention on the nodes - Shared attention mechanism
         edge = torch.cat((edge[:, :], edge_list_nhop[:, :]), dim=1)
         edge_embed = torch.cat(
-            (edge_embed[:, :], edge_embed_nhop[:, :]), dim=0)
-    
+            (edge_embed[:, :], edge_embed_nhop[:, :]), dim=0)  # WN18RR: torch.Size([294211, 50])
+        
+        ########## liyirui's improve is here ##########
+        # <begin>
+        # add self loop into edge
+        edge_s_loop_0 = torch.linspace(start=0, end=input.size()[0]-1, steps=input.size()[0]).long().cuda()
+        edge_s_loop_0 = torch.unsqueeze(edge_s_loop_0, 1)
+        edge_s_loop = torch.cat((edge_s_loop_0[:, :], edge_s_loop_0[:, :]), dim=1).transpose(0, 1)  # WN18RR: torch.Size([2, 40943])
+        
+        edge = torch.cat((edge[:, :], edge_s_loop[:, :]), dim=1)  # WN18RR: torch.Size([2, 335154])
+        
+        # add self loop embed into edge_embed
+        self_loop = torch.zeros(input.size()).cuda()  # WN18RR: torch.Size([40943, 50])
+        edge_embed = torch.cat((edge_embed[:, :], self_loop[:, :]), dim=0)  # WN18RR: torch.Size([335154, 50])
+
+        # <end>
         # print(">>>")
         # print(input[edge[0, :], :]) 
         # print(input[edge[1, :], :])
@@ -147,19 +161,10 @@ class SpGraphAttentionLayer(nn.Module):
 
         ########## liyirui's improve is here ##########
         # <begin>
-        # edge_h_1: [h_j][g_k]
-        # edge_h_2: [h_i][0] 或者 [h_i][self_loop]
-        edge_h_1 = torch.cat(
-            (input[edge[1, :], :], edge_embed[:, :]), dim=1).t()  # WN18RR: torch.Size([100, 294211])
-        # print(">>> edge_h_1.size():")
-        # print(edge_h_1.size())
-        self_loop = torch.zeros(input.size()).cuda()
-        edge_h_2 = torch.cat((input[:, :], self_loop[:, :]), dim=1).t()  # WN18RR: torch.Size([100, 40943])
-        # print(">>> edge_h_2.size():")
-        # print(edge_h_2.size())
-        edge_h = torch.cat((edge_h_1[:, :], edge_h_2[:, :]), dim=1).t().transpose(0, 1)
+        edge_h = torch.cat((input[edge[1, :], :], edge_embed[:, :]), dim=1).transpose(0, 1) # WN18RR: torch.Size([100, 335154])
+        print(edge_h.size())
         # <end>
-        
+
         edge_m = self.a.mm(edge_h)
         # edge_m: D * E
 
