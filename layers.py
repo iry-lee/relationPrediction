@@ -25,7 +25,7 @@ class ConvKB(nn.Module):
     def forward(self, conv_input):
         batch_size, length, dim = conv_input.size()
         # assuming inputs are of the form ->
-        print('>>> conv_input: ', conv_input, '\n')
+        # print('>>> conv_input: ', conv_input, '\n')
         conv_input = conv_input.transpose(1, 2)
         # batch * length(which is 3 here -> entity,relation,entity) * dim
         # To make tensor of size 4, where second dim is for input channels
@@ -89,12 +89,12 @@ class SpGraphAttentionLayer(nn.Module):
         self.nrela_dim = nrela_dim
         ########## liyirui replace this ##########
         # <begin>
-        # self.a = nn.Parameter(torch.zeros(
-        #     size=(out_features, 2 * in_features + nrela_dim)))
+        self.a = nn.Parameter(torch.zeros(
+            size=(out_features, 2 * in_features + nrela_dim)))
         # <end>
         # <new>
-        self.a = nn.Parameter(torch.zeros(
-             size=(out_features, 2 * in_features)))
+        # self.a = nn.Parameter(torch.zeros(
+        #      size=(out_features, 2 * in_features)))
         # <end new>
         nn.init.xavier_normal_(self.a.data, gain=1.414)
         self.a_2 = nn.Parameter(torch.zeros(size=(1, out_features)))
@@ -122,17 +122,17 @@ class SpGraphAttentionLayer(nn.Module):
         ########## liyirui's improve is here ##########
         # <begin>
         # add self loop into edge
-        edge_s_loop_0 = torch.linspace(start=0, end=input.size()[0]-1, steps=input.size()[0]).long().cuda()
-        edge_s_loop_0 = torch.unsqueeze(edge_s_loop_0, 1)
-        edge_s_loop = torch.cat((edge_s_loop_0[:, :], edge_s_loop_0[:, :]), dim=1).transpose(0, 1)  # WN18RR: torch.Size([2, 40943])
+        # edge_s_loop_0 = torch.linspace(start=0, end=input.size()[0]-1, steps=input.size()[0]).long().cuda()
+        # edge_s_loop_0 = torch.unsqueeze(edge_s_loop_0, 1)
+        # edge_s_loop = torch.cat((edge_s_loop_0[:, :], edge_s_loop_0[:, :]), dim=1).transpose(0, 1)  # WN18RR: torch.Size([2, 40943])
         
-        edge = torch.cat((edge[:, :], edge_s_loop[:, :]), dim=1)  # WN18RR: torch.Size([2, 335154])
+        # edge = torch.cat((edge[:, :], edge_s_loop[:, :]), dim=1)  # WN18RR: torch.Size([2, 335154])
         
-        # add self loop embed into edge_embed
-        self_loop = torch.zeros(input.size()).cuda()  # WN18RR: torch.Size([40943, 50])
-        edge_embed = torch.cat((edge_embed[:, :], self_loop[:, :]), dim=0)  # WN18RR: torch.Size([335154, 50])
-
+        # # add self loop embed (0 matirx) into edge_embed
+        # self_loop = torch.zeros(input.size()).cuda()  # WN18RR: torch.Size([40943, 50])
+        # edge_embed = torch.cat((edge_embed[:, :], self_loop[:, :]), dim=0)  # WN18RR: torch.Size([335154, 50])
         # <end>
+
         # print(">>>")
         # print(input[edge[0, :], :]) 
         # print(input[edge[1, :], :])
@@ -154,15 +154,13 @@ class SpGraphAttentionLayer(nn.Module):
         # g_k: edge_embed[:, :]
         ########## liyirui comment this line ##########
         # <begin>
-        # edge_h = torch.cat(
-        #     (input[edge[0, :], :], input[edge[1, :], :], edge_embed[:, :]), dim=1).t()  # WN18RR: torch.Size([100, 294211])
+        edge_h = torch.cat(
+            (input[edge[0, :], :], input[edge[1, :], :], edge_embed[:, :]), dim=1).t()  # WN18RR: torch.Size([100, 294211])
         # <end>
         # edge_h: (2*in_dim + nrela_dim) x E
-
         ########## liyirui's improve is here ##########
         # <begin>
-        edge_h = torch.cat((input[edge[1, :], :], edge_embed[:, :]), dim=1).transpose(0, 1) # WN18RR: torch.Size([100, 335154])
-        print(edge_h.size())
+        # edge_h = torch.cat((input[edge[1, :], :], edge_embed[:, :]), dim=1).transpose(0, 1) # WN18RR: torch.Size([100, 335154])
         # <end>
 
         edge_m = self.a.mm(edge_h)

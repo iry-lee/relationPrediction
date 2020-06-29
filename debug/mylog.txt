@@ -1,50 +1,11 @@
-(pytorch35) liyirui@faery:~/PycharmProjects/relationPrediction$ CUDA_VISIBLE_DEVICES=1 python3 main.py --get_2hop True
-number of unique_entities -> 40559
-number of unique_entities -> 5173
-number of unique_entities -> 5323
-Initialised relations and entities from TransE
-Graph created
-length of graph keys is  39610
-time taken  1.9685945510864258
-length of neighbors dict is  39115
-Total triples count 93003, training triples 86835, validation_triples 3034, test_triples 3134
-Opening node_neighbors pickle object
-Initial entity dimensions torch.Size([40943, 50]) , relation dimensions torch.Size([11, 50])
-Defining model
+<1>
+在Anna的1080Ti上训练的时候，如果将FB15K模型的注意力改为三头，会出现显存不够的问题。
+$ CUDA_VISIBLE_DEVICES=1 python3 main.py --data ./data/FB15k-237/ --epochs_gat 3000 --epochs_conv 150 --weight_decay_gat 0.00001 --get_2hop True --partial_2hop True --batch_size_gat 272115 --margin 1 --out_channels 50 --drop_conv 0.3 --output_folder ./checkpoints/fb/out/
 
-Model type -> GAT layer with 2 heads used , Initital Embeddings training
-length of unique_entities  40559
-Number of epochs 3600
+解决方法是减小batch size，我直接删掉了命令的参数中的batch size选项
+$ CUDA_VISIBLE_DEVICES=1 python3 main.py --data ./data/FB15k-237/ --epochs_gat 3000 --epochs_conv 150 --weight_decay_gat 0.00001 --get_2hop True --partial_2hop True --margin 1 --out_channels 50 --drop_conv 0.3 --output_folder ./checkpoints/fb/out/
+减小后就使用默认的batch大小了：
 
-epoch->  0
->>> edge_e.shape[0]:
-335154
-Traceback (most recent call last):
-  File "main.py", line 367, in <module>
-    train_gat(args)
-  File "main.py", line 236, in train_gat
-    Corpus_, Corpus_.train_adj_matrix, train_indices, current_batch_2hop_indices)
-  File "/home/liyirui/miniconda3/envs/pytorch35/lib/python3.5/site-packages/torch/nn/modules/module.py", line 489, in __call__
-    result = self.forward(*input, **kwargs)
-  File "/home/liyirui/PycharmProjects/relationPrediction/models.py", line 160, in forward
-    edge_list, edge_type, edge_embed, edge_list_nhop, edge_type_nhop)
-  File "/home/liyirui/miniconda3/envs/pytorch35/lib/python3.5/site-packages/torch/nn/modules/module.py", line 489, in __call__
-    result = self.forward(*input, **kwargs)
-  File "/home/liyirui/PycharmProjects/relationPrediction/models.py", line 60, in forward
-    for att in self.attentions], dim=1)
-  File "/home/liyirui/PycharmProjects/relationPrediction/models.py", line 60, in <listcomp>
-    for att in self.attentions], dim=1)
-  File "/home/liyirui/miniconda3/envs/pytorch35/lib/python3.5/site-packages/torch/nn/modules/module.py", line 489, in __call__
-    result = self.forward(*input, **kwargs)
-  File "/home/liyirui/PycharmProjects/relationPrediction/layers.py", line 177, in forward
-    edge, edge_e, N, edge_e.shape[0], 1)
-  File "/home/liyirui/miniconda3/envs/pytorch35/lib/python3.5/site-packages/torch/nn/modules/module.py", line 489, in __call__
-    result = self.forward(*input, **kwargs)
-  File "/home/liyirui/PycharmProjects/relationPrediction/layers.py", line 74, in forward
-    return SpecialSpmmFunctionFinal.apply(edge, edge_w, N, E, out_features)
-  File "/home/liyirui/PycharmProjects/relationPrediction/layers.py", line 47, in forward
-    edge, edge_w, torch.Size([N, N, out_features]))
-RuntimeError: indices and values must have same nnz, but got nnz from indices: 294211, nnz from values: 335154
+args.add_argument("-b_gat", "--batch_size_gat", type=int,
+                      default=86835, help="Batch size for GAT")
 
-
-经过读代码，发现应该是在layer.py的47行中，edge.size()为[2, 294211]，所以应该就是它的维度不匹配
