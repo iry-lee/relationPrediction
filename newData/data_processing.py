@@ -68,6 +68,7 @@ def createID(yago):
     entity_file.close()
     relation_file.close()
 
+# 对实体和关系向量进行随机初始化
 def randomInitialVec(yago):
     dimension = 100  # 向量的维度
     n_entity = 98336
@@ -96,11 +97,51 @@ def randomInitialVec(yago):
         relation2vec_file.write("\n")
     relation2vec_file.close()
 
+# 使用ontology对entity进行clustering
+# 想一下如何做这个聚类，如何根据层级设置margin，怎么确定这个类是高层次还是低层次？通过isa？这里可以跟师兄讨论一下
+def findLevelofISA(yago):
+    filename = "dbpedia/db_onto_isa.txt"
+    if yago:
+        filename = "yago/yago_onto_isa.txt"
+
+    file = open(filename, "r")
+    table = {}
+    lines = file.readlines()
+
+    # 只执行一遍for循环，可能会存在消息延迟的问题，得不到最终的层级
+    # 但因为isa的关系可能存在闭环，所以下面while循环可能会死循环
+    ct = 0
+    while True:
+        flag = False
+        ct = ct + 1
+        for i in range(0, len(lines)):
+            head_onto = lines[i].split()[0]
+            tail_onto = lines[i].split()[2]
+            # 暂且消除自环
+            if tail_onto == head_onto:
+                continue
+            if head_onto not in table:
+                table[head_onto] = 1
+                flag = True
+            if tail_onto not in table:
+                table[tail_onto] = 1
+                flag = True
+
+            if table[tail_onto] < table[head_onto] + 1:
+                table[tail_onto] = table[head_onto] + 1
+                flag = True
+        if not flag or ct > 100:
+            break
+
+    for item in table.items():
+        print(item)
+
+
 # createValidFile(True)
 # createValidFile(False)
 
 # createID(True)
 # createID(False)
 
-randomInitialVec(True)
-randomInitialVec(False)
+# randomInitialVec(True)
+# randomInitialVec(False)
